@@ -2,10 +2,11 @@ import multer from "multer";
 
 const storage = multer.diskStorage({
     destination: function(req,file,cb){
-       cb(null,'./uploads/temp')
+      cb(null,'./uploads/inputs')
     },
     filename: function(req,file,cb){
-       cb(null,file.originalName) //Change filenaming logic for ffmpeg file pathS
+      const suffix = req.params.videoId;
+      cb(null,file.fieldname+'-'+suffix) //Change filenaming logic for ffmpeg file paths
     }
 })
 
