@@ -1,6 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { supabase } from "../db/supabaseDB.js";
 import { extractAudioFile } from "./extract-audio.logic.js";
+import { transcriptAudio } from "./audio-transcription.logic.js";
+import { textSplitter } from "./text-chunking.logic.js";
 
 export const generateAndSendID = asyncHandler(async(req,res)=>{
    const userID = req.user._id;
@@ -22,7 +24,7 @@ export const generateAndSendID = asyncHandler(async(req,res)=>{
    res.status(200).json({
       success: true,
       message: 'VideoID generated successfully',
-      body: data._id
+      videoId: data._id
    })
 })
 
@@ -55,17 +57,32 @@ export const processVideo = asyncHandler(async(req,res)=>{
    const audioPath = `../uploads/outputs/uploaded_file${videoId}.mp3`
 
    try{
-       extractAudioFile(videoPath,audioPath)
+      extractAudioFile(videoPath,audioPath)
    }
    catch(error){
        throw new Error(`Audio extraction failed ${error}`)
        return res.status(500).json({
          success: false,
          message: `Internal server error: ${error}`
+      })
+   }
+
+   
+   try{
+     const transcription = await transcriptAudio(audioPath); //Convert audio file to text
+     const chunkedText = await textSplitter(transcription); //Chunk the text
+     const vectorEmbeddings = await convertToVectorEmbeddings(chunkedText); //convert the chunked text to vector embeddings
+     
+     //Finally store it in supabase(pgvector) vector db
+     
+   }
+   catch(error){
+      throw new Error(`Video processing has failed ${error}`)
+       return res.status(500).json({
+         success: false,
+         message: `Internal server error: ${error}`
        })
    }
 
-   //Transcipt audio file into text using openAI wishper
-   
 })
 

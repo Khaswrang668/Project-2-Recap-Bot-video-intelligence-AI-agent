@@ -3,7 +3,8 @@ import ffmpegPath from "ffmpeg-static";
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 export const extractAudioFile = (videoPath,audioPath)=>{
-    ffmpeg(videoPath)
+    await new Promise((resolve,reject)=>{
+        ffmpeg(videoPath)
         .output(audioPath)
         .noVideo() 
         .on('end', () => {
@@ -13,4 +14,5 @@ export const extractAudioFile = (videoPath,audioPath)=>{
             console.error('An error occurred: ' + err.message);
         })
         .run();
+    })
 }
