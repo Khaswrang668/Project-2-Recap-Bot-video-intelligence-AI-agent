@@ -54,8 +54,8 @@ export const processVideo = asyncHandler(async(req,res)=>{
    }
 
    //Fetch the video and start processing it
-   const videoPath = `../uploads/inputs/uploaded_file${videoId}.mp4`
-   const audioPath = `../uploads/outputs/uploaded_file${videoId}.mp3`
+   const videoPath = `../uploads/inputs/uploaded_file-${videoId}`
+   const audioPath = `../uploads/outputs/uploaded_file-${videoId}`
 
    try{
       await extractAudioFile(videoPath,audioPath)
@@ -70,11 +70,22 @@ export const processVideo = asyncHandler(async(req,res)=>{
    
    try{
      const transcription = await transcriptAudio(audioPath); //Convert audio file to text
+
      const chunkedText = await textSplitter(transcription); //Chunk the text
-     const vectorEmbeddings = await convertToVectorEmbeddings(chunkedText); //convert the chunked text to vector embeddings
-     
-     //Finally store it in supabase(pgvector) vector db
-     
+
+     chunkedText.map((text)=>{
+      const embedding = await convertToVectorEmbeddings(text); 
+
+      const {data,error} = await supabase.from('Documents')
+      .insert({
+         body: text,
+         embedding: embedding,
+         video: videoId
+      })
+      .select()
+      .single()
+
+     })
    }
    catch(error){
        return res.status(500).json({
@@ -82,6 +93,10 @@ export const processVideo = asyncHandler(async(req,res)=>{
          message: `Internal server error: ${error}`
        })
    }
-
+   
+   res.status(200).json({
+      success: true,
+      message: 'Successfully processed the video and stored its vector embeddings'
+   })
 })
 

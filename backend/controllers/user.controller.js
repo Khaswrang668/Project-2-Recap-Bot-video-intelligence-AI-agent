@@ -69,7 +69,13 @@ export const userLogin = asyncHandler(async(req,res)=>{
         })
     }
 
-    const {accessToken,refreshToken} = await generateAccessAndRefreshTokens(data.id,username,email);
+    const {accessToken,refreshToken} = await generateAccessAndRefreshTokens(data.id,data.username,data.email);
+    
+    const {error} = await supabase.from('Users')
+    .insert({refreshToken})
+    .eq('id',data.id)
+    .select()
+    .single()
 
     const options = {
         httpOnly: true,
@@ -140,8 +146,8 @@ export const userLogout = asyncHandler(async(req,res)=>{
     const userId = req.user._id;
 
     const {data,error} = await supabase.from('Users')
-    .update({refreshToken: 1})
-    .eq('_id',userId)
+    .update({refreshToken: null})
+    .eq('id',userId)
     .select()
     .single()
     

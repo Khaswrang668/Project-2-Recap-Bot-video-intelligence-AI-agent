@@ -18,15 +18,21 @@ export const verifyJWT = asyncHandler(async(req, res, next) => {
     
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
     
-        const user = await supabase.from('Users').select('*').eq('id',decodedToken?._id).single();
+        const {data,error} = await supabase.from('Users').select('*').eq('id',decodedToken?._id).single();
     
-        if (!user) {
+        if (!data) {
             return res.status(401).json({
                 success: false,
                 message: "User doesn't exist-unable to verify tokens"
             })
         }
-    
+        
+        if(error) {
+            return res.status(500).json({
+                success: false,
+                message: `Internal server error ${error}`
+            })
+        }
         req.user = user;
         next()
     } catch (error) {
