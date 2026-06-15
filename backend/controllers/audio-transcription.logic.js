@@ -1,15 +1,16 @@
 import OpenAI from "openai";
 import 'dotenv/config';
+import fs from 'fs';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 })
 
 export const transcriptAudio = async(filepath) =>{
-    const transcription = await openai.audio.transcriptions({
-        file: filepath,
+    const transcription = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(filepath),
         model: 'wishper-1'
     })
-    console.log(transcription);
-    return transcription;
+    console.log(transcription.text);
+    return transcription.text;
 }

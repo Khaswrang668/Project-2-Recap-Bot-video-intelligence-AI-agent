@@ -3,6 +3,7 @@ import { supabase } from "../db/supabaseDB.js";
 import { extractAudioFile } from "./extract-audio.logic.js";
 import { transcriptAudio } from "./audio-transcription.logic.js";
 import { textSplitter } from "./text-chunking.logic.js";
+import { convertToVectorEmbeddings } from "./convert-to-vector-embeddings.logic.js";
 
 export const generateAndSendID = asyncHandler(async(req,res)=>{
    const userID = req.user._id;
@@ -57,11 +58,10 @@ export const processVideo = asyncHandler(async(req,res)=>{
    const audioPath = `../uploads/outputs/uploaded_file${videoId}.mp3`
 
    try{
-      extractAudioFile(videoPath,audioPath)
+      await extractAudioFile(videoPath,audioPath)
    }
    catch(error){
-       throw new Error(`Audio extraction failed ${error}`)
-       return res.status(500).json({
+      return res.status(500).json({
          success: false,
          message: `Internal server error: ${error}`
       })
@@ -77,7 +77,6 @@ export const processVideo = asyncHandler(async(req,res)=>{
      
    }
    catch(error){
-      throw new Error(`Video processing has failed ${error}`)
        return res.status(500).json({
          success: false,
          message: `Internal server error: ${error}`
