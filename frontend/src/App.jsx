@@ -7,14 +7,14 @@ function App() {
   const [text,setText] = useState('hello world');
 
   const handleFileChange = (e)=>{
-    setVideo(e.target.file[0]);
+    setVideo(e.target.files[0]);
   }
 
   const getVideoId = async()=>{
-    await axios.get("http://localhost:3000/api/v1/get-video-data")
+    await axios.get("http://localhost:4000/api/v1/get-video-data")
     .then(response=>{
-      console.log(response.videoId);
-      return response.videoId;
+      console.log(response.data.videoId);
+      return response.data.videoId;
     })
     .catch(error=>{console.error(`An error occured ${error}`)})
   }
@@ -33,7 +33,7 @@ function App() {
     formData.append('uploaded_video',uploaded_video);
 
     await axios.post(
-      `http://localhost:3000/api/v1/videos/${videoId}/process-video`,
+      `http://localhost:4000/api/v1/videos/${videoId}/process-video`,
       formData
     )
     .then(response => {

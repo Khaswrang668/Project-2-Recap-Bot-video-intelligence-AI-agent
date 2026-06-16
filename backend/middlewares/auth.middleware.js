@@ -33,7 +33,7 @@ export const verifyJWT = asyncHandler(async(req, res, next) => {
                 message: `Internal server error ${error}`
             })
         }
-        req.user = user;
+        req.user = data;
         next()
     } catch (error) {
         console.log("Error in verifying the tokens",error)

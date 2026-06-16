@@ -4,6 +4,7 @@ import { extractAudioFile } from "./extract-audio.logic.js";
 import { transcriptAudio } from "./audio-transcription.logic.js";
 import { textSplitter } from "./text-chunking.logic.js";
 import { convertToVectorEmbeddings } from "./convert-to-vector-embeddings.logic.js";
+import fs from 'fs';
 
 export const generateAndSendID = asyncHandler(async(req,res)=>{
    const userID = req.user._id;
@@ -25,7 +26,7 @@ export const generateAndSendID = asyncHandler(async(req,res)=>{
    res.status(200).json({
       success: true,
       message: 'VideoID generated successfully',
-      videoId: data._id
+      videoId: data.id
    })
 })
 
@@ -36,7 +37,7 @@ export const processVideo = asyncHandler(async(req,res)=>{
    //Check if the video actually belongs to the user
    const {data,error} = await supabase.from('Videos')
    .select('*')
-   .eq('_id',videoId)
+   .eq('id',videoId)
    .single()
 
    if(error) {
@@ -57,20 +58,10 @@ export const processVideo = asyncHandler(async(req,res)=>{
    const videoPath = `../uploads/inputs/uploaded_file-${videoId}`
    const audioPath = `../uploads/outputs/uploaded_file-${videoId}`
 
-   try{
-      await extractAudioFile(videoPath,audioPath)
-   }
-   catch(error){
-      return res.status(500).json({
-         success: false,
-         message: `Internal server error: ${error}`
-      })
-   }
-
    
    try{
+     await extractAudioFile(videoPath,audioPath)
      const transcription = await transcriptAudio(audioPath); //Convert audio file to text
-
      const chunkedText = await textSplitter(transcription); //Chunk the text
 
      chunkedText.map((text)=>{
@@ -92,6 +83,10 @@ export const processVideo = asyncHandler(async(req,res)=>{
          success: false,
          message: `Internal server error: ${error}`
        })
+   }
+   finally {
+     if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+     if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
    }
    
    res.status(200).json({
