@@ -55,28 +55,30 @@ export const processVideo = asyncHandler(async(req,res)=>{
    }
 
    //Fetch the video and start processing it
-   const videoPath = `../uploads/inputs/uploaded_file-${videoId}`
-   const audioPath = `../uploads/outputs/uploaded_file-${videoId}`
+   const videoPath = req.file.path;s
+   const audioPath = `uploads/outputs/uploaded_file-${videoId}`
 
    
    try{
      await extractAudioFile(videoPath,audioPath)
      const transcription = await transcriptAudio(audioPath); //Convert audio file to text
      const chunkedText = await textSplitter(transcription); //Chunk the text
+     
+     await Promise.all(
+      chunkedText.map((text)=>{
+        const embedding = await convertToVectorEmbeddings(text);
 
-     chunkedText.map((text)=>{
-      const embedding = await convertToVectorEmbeddings(text); 
-
-      const {data,error} = await supabase.from('Documents')
-      .insert({
+        const {data,error} = await supabase.from('Documents')
+        .insert({
          body: text,
          embedding: embedding,
          video: videoId
-      })
-      .select()
-      .single()
-
-     })
+        })
+        .single()
+        .select()
+        })
+     )
+   
    }
    catch(error){
        return res.status(500).json({

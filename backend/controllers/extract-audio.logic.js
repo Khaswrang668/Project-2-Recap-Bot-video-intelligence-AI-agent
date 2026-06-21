@@ -1,5 +1,5 @@
 import ffmpegPath from "ffmpeg-static";
-import Ffmpeg from "fluent-ffmpeg";
+import ffmpeg from "fluent-ffmpeg";
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 

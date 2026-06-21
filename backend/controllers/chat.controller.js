@@ -1,4 +1,4 @@
-import { supabase } from "../db/supabaseDB";
+import { supabase } from "../db/supabaseDB.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { convertToVectorEmbeddings } from "./convert-to-vector-embeddings.logic.js";
 import { getAIResponse } from "./query.openAI.logic.js";
@@ -33,7 +33,7 @@ export const initChatBox = asyncHandler(async(req,res)=>{
       })
    }
    
-   const {data,error} = await supabase.from('Box')
+   const {data1,error1} = await supabase.from('Box')
    .insert({
       user: user,
       video: videoId
@@ -42,9 +42,9 @@ export const initChatBox = asyncHandler(async(req,res)=>{
    .single()
 
    res.status(200).json({
-      success: false,
+      success: true,
       message: 'Successfully intialized a chat box and returned its Id',
-      body: data.id
+      body: data1.id
    })
 })
 
@@ -53,11 +53,26 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    const chatId = req.params.chatId;
 
    //Convert the message into a vector embedding
-   const queryEmbedding = convertToVectorEmbeddings(message);
-
-   //This part is later work for claude due to changes in db structure
-   /*supabase vector db qeury to find the most relevent chunks, start with const chunks*/
-    
+   const queryEmbedding = await convertToVectorEmbeddings(message);
+   
+   const {data: box, error: boxError} = await supabase.from('Box')
+   .select('Video')
+   .eq('id',chatId)
+   .single()
+   
+   if(boxError) {
+      return res.status.json({
+         success: false,
+         message: `Internal server error ${error}`
+      })
+   }
+   
+   const {data: chunks, error} = await supabase.rpc('match_documents',{
+      query_embedding: queryEmbedding,
+      match_video_id: box.video,
+      match_count: 5
+   })
+   
    if(error) {
       return res.status(500).json({
          success: false,

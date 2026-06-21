@@ -4,7 +4,7 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY 
 });
 
-export const getAIResponse = async ((userQuery,context)=>{
+export const getAIResponse = async(userQuery,context)=>{
 const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
@@ -23,4 +23,4 @@ ${context}`
 });
 
   return completion.choices[0].message.content;
-})
+}

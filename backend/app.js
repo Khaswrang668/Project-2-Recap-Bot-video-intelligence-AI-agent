@@ -12,7 +12,7 @@ app.use(cookieParser());
 //Import the routes here from route folder
 //Link them to api/v1/{domain_name}
 import videoRouter from './routes/video.route.js';
-app.use("api/v1/videos",videoRouter);
+app.use("/api/v1/videos",videoRouter);
 
 app.get('/',(req,res)=>{
     res.send('The server is working')

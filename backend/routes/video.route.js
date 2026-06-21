@@ -1,6 +1,7 @@
 import { verifyJWT } from '../middlewares/auth.middleware.js'
 import { processVideo,generateAndSendID } from '../controllers/video.controller.js'
 import { Router } from "express";
+import { upload } from '../middlewares/multer.middleware.js';
 
 const router = Router();
 
