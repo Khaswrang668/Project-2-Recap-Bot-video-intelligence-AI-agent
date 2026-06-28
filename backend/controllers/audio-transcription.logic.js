@@ -14,3 +14,4 @@ export const transcriptAudio = async(filepath) =>{
     console.log(transcription.text);
     return transcription.text;
 }
+
