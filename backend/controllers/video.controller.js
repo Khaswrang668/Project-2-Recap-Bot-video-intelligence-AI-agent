@@ -63,12 +63,9 @@ export const processVideo = asyncHandler(async(req,res)=>{
      await extractAudioFile(videoPath,audioPath)
      const transcription = await transcriptAudio(audioPath); //Convert audio file to text
      const chunkedText = await textSplitter(transcription); //Chunk the text
-     
-     await Promise.all(
-      chunkedText.map((text)=>{
-        const embedding = await convertToVectorEmbeddings(text);
+     const embedding = await convertToVectorEmbeddings(chunkedText);
 
-        const {data,error} = await supabase.from('Documents')
+      const {data,error} = await supabase.from('Documents')
         .insert({
          body: text,
          embedding: embedding,
@@ -76,9 +73,6 @@ export const processVideo = asyncHandler(async(req,res)=>{
         })
         .single()
         .select()
-        })
-     )
-   
    }
    catch(error){
        return res.status(500).json({
