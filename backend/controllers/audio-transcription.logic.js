@@ -9,7 +9,7 @@ const openai = new OpenAI({
 export const transcriptAudio = async(filepath) =>{
     const transcription = await openai.audio.transcriptions.create({
         file: fs.createReadStream(filepath),
-        model: 'wishper-1'
+        model: 'whisper-1'
     })
     console.log(transcription.text);
     return transcription.text;

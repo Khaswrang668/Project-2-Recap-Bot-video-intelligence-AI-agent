@@ -55,7 +55,7 @@ export const processVideo = asyncHandler(async(req,res)=>{
    }
 
    //Fetch the video and start processing it
-   const videoPath = req.file.path;s
+   const videoPath = req.file.path;
    const audioPath = `uploads/outputs/uploaded_file-${videoId}`
 
    
@@ -65,14 +65,13 @@ export const processVideo = asyncHandler(async(req,res)=>{
      const chunkedText = await textSplitter(transcription); //Chunk the text
      const embedding = await convertToVectorEmbeddings(chunkedText);
 
-      const {data,error} = await supabase.from('Documents')
-        .insert({
-         body: text,
-         embedding: embedding,
-         video: videoId
-        })
-        .single()
-        .select()
+     const rows = chunkedText.map((chunk, i) => ({
+     body: chunk,
+     embedding: embeddingResults[i].embedding,
+     video: videoId
+    }));
+
+    const { error } = await supabase.from('Documents').insert(rows);
    }
    catch(error){
        return res.status(500).json({

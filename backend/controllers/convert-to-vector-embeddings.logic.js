@@ -13,5 +13,5 @@ const embedding = await openai.embeddings.create({
   encoding_format: "float",
 });
 
-return embedding.data[0].embedding;
+return embedding.data;
 }

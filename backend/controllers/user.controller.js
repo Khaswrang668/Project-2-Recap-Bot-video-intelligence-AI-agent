@@ -72,7 +72,7 @@ export const userLogin = asyncHandler(async(req,res)=>{
     const {accessToken,refreshToken} = await generateAccessAndRefreshTokens(data.id,data.username,data.email);
     
     const {error1} = await supabase.from('Users')
-    .updates({refreshToken})
+    .update({refreshToken})
     .eq('id',data.id)
     .select()
     .single()

@@ -52,41 +52,69 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    const message = req.body.message;
    const chatId = req.params.chatId;
 
-   //Convert the message into a vector embedding
    const queryEmbedding = await convertToVectorEmbeddings(message);
-   
+
    const {data: box, error: boxError} = await supabase.from('Box')
-   .select('Video')
+   .select('video')          // match actual column casing
    .eq('id',chatId)
    .single()
-   
+
    if(boxError) {
-      return res.status.json({
+      return res.status(500).json({
          success: false,
-         message: `Internal server error ${error}`
+         message: `Internal server error ${boxError}`   // was `${error}` — undefined
       })
    }
-   
-   const {data: chunks, error} = await supabase.rpc('match_documents',{
+
+   // ownership check — currently missing, anyone with a chatId can query it
+   if (box.user !== req.user._id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized access to this chat' })
+   }
+
+   const {data: chunks, error: matchError} = await supabase.rpc('match_documents',{
       query_embedding: queryEmbedding,
       match_video_id: box.video,
       match_count: 5
    })
-   
-   if(error) {
+
+   if(matchError) {
       return res.status(500).json({
          success: false,
-         message: `Internal server error ${error}`
+         message: `Internal server error ${matchError}`
       })
    }
-   
-   const context = chunks.map(c => c.body).join('\n\n');
 
-   const response = await getAIResponse(message,context);
-   
-   //Store the response for later: chat history
+   const { data: history, error: historyError } = await supabase.from('Chats')
+   .select('user_query, response')
+   .eq('box', chatId)
+   .order('created_at', { ascending: true })
+   .limit(6);
 
-   const {data,error} = await supabase.from('Chats')
+   if(historyError) {
+      return res.status(500).json({
+         success: false,
+         message: `Internal server error ${historyError}`
+      })
+   }
+
+   // --- build context ---
+
+   const transcriptContext = chunks
+      .map(chunk => chunk.body)
+      .join('\n\n');
+
+   const conversationContext = history
+      .map(h => `User: ${h.user_query}\nAssistant: ${h.response}`)
+      .join('\n\n');
+
+   const context = {
+      transcript: transcriptContext,
+      conversation: conversationContext
+   };
+
+   const response = await getAIResponse(message, context);
+
+   const {data: chat, error: chatError} = await supabase.from('Chats')
    .insert({
       user_query: message,
       response: response,
@@ -94,17 +122,17 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    })
    .select()
    .single()
-   
-   if(error) {
+
+   if(chatError) {
       return res.status(500).json({
          success: false,
-         message: `Internal server error ${error}`
+         message: `Internal server error ${chatError}`
       })
    }
 
    res.status(200).json({
       success: true,
-      message: 'Sucessfully got the response',
+      message: 'Successfully got the response',
       body: response
    })
 })
