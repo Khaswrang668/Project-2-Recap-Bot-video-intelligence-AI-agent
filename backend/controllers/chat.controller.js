@@ -1,7 +1,9 @@
 import { supabase } from "../db/supabaseDB.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { convertToVectorEmbeddings } from "./convert-to-vector-embeddings.logic.js";
-import { getAIResponse } from "./query.openAI.logic.js";
+import { convertToVectorEmbeddings } from "../business-logic/convert-to-vector-embeddings.logic.js";
+import { getAIResponse } from "../business-logic/query-openAI.logic.js";
+import { streamText, convertToModelMessages } from 'ai';
+import { openai } from '@ai-sdk/openai';
 
 export const initChatBox = asyncHandler(async(req,res)=>{
    //Create a caht box to store all chat messages of the same topic/video
@@ -51,23 +53,19 @@ export const initChatBox = asyncHandler(async(req,res)=>{
 export const responseMessage = asyncHandler(async(req,res)=>{
    const message = req.body.message;
    const chatId = req.params.chatId;
+   const userId = req.user._id;
 
    const queryEmbedding = await convertToVectorEmbeddings(message);
 
    const {data: box, error: boxError} = await supabase.from('Box')
-   .select('video')          // match actual column casing
+   .select('video, user')
    .eq('id',chatId)
    .single()
 
    if(boxError) {
-      return res.status(500).json({
-         success: false,
-         message: `Internal server error ${boxError}`   // was `${error}` — undefined
-      })
+      return res.status(500).json({ success: false, message: `Internal server error ${boxError}` })
    }
-
-   // ownership check — currently missing, anyone with a chatId can query it
-   if (box.user !== req.user._id) {
+   if (box.user !== userId) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to this chat' })
    }
 
@@ -76,12 +74,8 @@ export const responseMessage = asyncHandler(async(req,res)=>{
       match_video_id: box.video,
       match_count: 5
    })
-
    if(matchError) {
-      return res.status(500).json({
-         success: false,
-         message: `Internal server error ${matchError}`
-      })
+      return res.status(500).json({ success: false, message: `Internal server error ${matchError}` })
    }
 
    const { data: history, error: historyError } = await supabase.from('Chats')
@@ -89,50 +83,98 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    .eq('box', chatId)
    .order('created_at', { ascending: true })
    .limit(6);
-
    if(historyError) {
-      return res.status(500).json({
-         success: false,
-         message: `Internal server error ${historyError}`
-      })
+      return res.status(500).json({ success: false, message: `Internal server error ${historyError}` })
    }
 
-   // --- build context ---
-
-   const transcriptContext = chunks
-      .map(chunk => chunk.body)
-      .join('\n\n');
-
+   const transcriptContext = chunks.length
+      ? chunks.map(c => c.body).join('\n\n')
+      : 'No relevant transcript sections found.';
    const conversationContext = history
       .map(h => `User: ${h.user_query}\nAssistant: ${h.response}`)
       .join('\n\n');
 
-   const context = {
-      transcript: transcriptContext,
-      conversation: conversationContext
-   };
+   // streaming headers — needed on Render to avoid buffering
+   res.setHeader('Content-Type', 'text/event-stream');
+   res.setHeader('Cache-Control', 'no-cache, no-transform');
+   res.setHeader('Connection', 'keep-alive');
+   res.setHeader('X-Accel-Buffering', 'no');
 
-   const response = await getAIResponse(message, context);
+   const result = streamText({
+      model: openai('gpt-4o-mini'),
+      system: `You are answering questions about a video, using transcript excerpts as your source of truth.
 
-   const {data: chat, error: chatError} = await supabase.from('Chats')
-   .insert({
+Transcript context:
+${transcriptContext}
+
+Conversation so far:
+${conversationContext}`,
+      prompt: message,
+   });
+
+   result.pipeDataStreamToResponse(res); // sends the SSE-formatted stream
+
+   // after the stream completes, persist the full answer
+   const fullText = await result.text;
+   await supabase.from('Chats').insert({
       user_query: message,
-      response: response,
+      response: fullText,
       box: chatId
-   })
-   .select()
-   .single()
+   });
+})
 
-   if(chatError) {
+export const getChatHistory = asyncHandler(async(req,res)=>{
+   const userId = req.user._id;
+
+   const {data: chatHistory,error: chatHistoryError} = await supabase.from('Box')
+   .select('*')
+   .eq('user',userId)
+   .order('created_at',{ascending: false})
+   .limit(10)
+
+   if(chatHistoryError) {
       return res.status(500).json({
          success: false,
-         message: `Internal server error ${chatError}`
+         message: 'some error occured fetching the chat history data'
       })
    }
 
    res.status(200).json({
       success: true,
-      message: 'Successfully got the response',
-      body: response
+      chatHistory: chatHistory
+   })
+})
+
+export const viewChat = asyncHandler(async(req,res)=>{
+   const boxId = req.params.boxId;
+   const userId = req.user._id;
+
+   const { data: box, error: boxError } = await supabase.from('Box')
+   .select('user')
+   .eq('id', boxId)
+   .single();
+
+   if (boxError || !box) {
+      return res.status(404).json({ success: false, message: 'Chat doesn\'t exist' });
+   }
+   if (box.user !== userId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized access to this chat' });
+   }
+
+   const {data: messages, error: messageError} = await supabase.from('Chats')
+   .select('*')
+   .eq('box', boxId)
+   .order('created_at', { ascending: true }); // add ordering — otherwise message order isn't guaranteed
+
+   if(messageError) {
+      return res.status(500).json({
+         success: false,
+         message: 'Chat doesn\'t exist'
+      })
+   }
+
+   res.status(200).json({
+      success: true,
+      messages: messages
    })
 })

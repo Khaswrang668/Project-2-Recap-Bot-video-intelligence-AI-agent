@@ -1,9 +1,9 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { supabase } from "../db/supabaseDB.js";
-import { extractAudioFile } from "./extract-audio.logic.js";
-import { transcriptAudio } from "./audio-transcription.logic.js";
-import { textSplitter } from "./text-chunking.logic.js";
-import { convertToVectorEmbeddings } from "./convert-to-vector-embeddings.logic.js";
+import { extractAudioFile } from "../business-logic/extract-audio.logic.js";
+import { transcriptAudio } from "../business-logic/audio-transcription.logic.js";
+import { textSplitter } from "../business-logic/text-chunking.logic.js";
+import { convertToVectorEmbeddings } from "../business-logic/convert-to-vector-embeddings.logic.js";
 import fs from 'fs';
 
 export const generateAndSendID = asyncHandler(async(req,res)=>{

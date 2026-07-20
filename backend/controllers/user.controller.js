@@ -171,3 +171,66 @@ export const userLogout = asyncHandler(async(req,res)=>{
         message: 'User successfully logged out'
     })
 })
+
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+    const user = req.user._id;
+
+    if (!incomingRefreshToken) {
+        return res.status(404).json({
+          success: false,
+          message: "Unauthorized request"
+        })
+    }
+
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+    
+        const {data: user,erorr: userError} = await supabase.from('Users')
+        .select('*')
+        .eq('id',user)
+        .single();
+
+        if (!user) {
+            return res.status(404).json({
+              success: false,
+              message: "User doesn't exist"
+            })
+        }
+    
+        if (incomingRefreshToken !== user?.refreshToken) {
+            return res.status(404).json({
+              success: false,
+              mesage: "Invalid refresh token"
+            })
+        }
+    
+        const options = {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none'
+        }
+    
+        const {accessToken, refreshToken: newRefreshToken} = await generateAccessAndRefereshTokens(user._id)
+    
+        return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", newRefreshToken, options)
+        .json({
+           success: true,
+           message: "access token refreshed successfully"
+        })
+    } catch (error) {
+        console.log("Error message",error)
+
+        res.status(404).json({
+          success: false,
+          message: `error regenerating access tokens , ${error}`
+        })
+    }
+
+})
