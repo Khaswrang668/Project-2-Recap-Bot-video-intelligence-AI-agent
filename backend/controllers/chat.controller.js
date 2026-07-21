@@ -1,7 +1,7 @@
 import { supabase } from "../db/supabaseDB.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { convertToVectorEmbeddings } from "../business-logic/convert-to-vector-embeddings.logic.js";
-import { getAIResponse } from "../business-logic/query-openAI.logic.js";
+//import { getAIResponse } from "../business-logic/query-openAI.logic.js";
 import { streamText, convertToModelMessages } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
@@ -83,6 +83,7 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    .eq('box', chatId)
    .order('created_at', { ascending: true })
    .limit(6);
+   
    if(historyError) {
       return res.status(500).json({ success: false, message: `Internal server error ${historyError}` })
    }

@@ -1,9 +1,4 @@
-import OpenAI from "openai";
-import 'dotenv/config';
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-})
+import openai from '../openaiClient.js';
 
 export const convertToVectorEmbeddings = async (textChunks)=>{
 
