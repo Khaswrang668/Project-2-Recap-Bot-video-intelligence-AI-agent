@@ -88,6 +88,7 @@ export const userLogin = asyncHandler(async(req,res)=>{
     .cookie('refreshToken',refreshToken,options)
     .json({
        success: true,
+       accessToken: accessToken,
        message: 'User login successfull !',
     })
 })

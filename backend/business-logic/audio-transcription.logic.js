@@ -1,6 +1,5 @@
-import openai from '../openaiClient.js';
+import openai from '../utils/openaiClient.js';
 import fs from 'fs';
-
 
 export const transcriptAudio = async(filepath) =>{
     const transcription = await openai.audio.transcriptions.create({

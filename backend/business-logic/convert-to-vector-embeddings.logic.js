@@ -1,4 +1,4 @@
-import openai from '../openaiClient.js';
+import openai from '../utils/openaiClient.js';
 
 export const convertToVectorEmbeddings = async (textChunks)=>{
 

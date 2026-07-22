@@ -7,7 +7,8 @@ import { convertToVectorEmbeddings } from "../business-logic/convert-to-vector-e
 import fs from 'fs';
 
 export const generateAndSendID = asyncHandler(async(req,res)=>{
-   const userID = req.user._id;
+   const userID = req.user.id;
+   console.log(`User: ${userID}`)
 
    const {data,error} = await supabase.from('Videos')
    .insert({
@@ -15,6 +16,8 @@ export const generateAndSendID = asyncHandler(async(req,res)=>{
    })
    .select()
    .single()
+   
+   console.log(data);
 
    if(error) {
      return res.status(500).json({
@@ -32,7 +35,7 @@ export const generateAndSendID = asyncHandler(async(req,res)=>{
 
 export const processVideo = asyncHandler(async(req,res)=>{
    const videoId = req.params.videoId;
-   const userId = req.user._id;
+   const userId = req.user.id;
    
    //Check if the video actually belongs to the user
    const {data,error} = await supabase.from('Videos')
@@ -46,6 +49,7 @@ export const processVideo = asyncHandler(async(req,res)=>{
         message: `Internal server error ${error}`
      })
    }
+   console.log(`${data.user}  ${userId}`);
 
    if(data.user !== userId) {
      return res.status(404).json({
@@ -56,8 +60,7 @@ export const processVideo = asyncHandler(async(req,res)=>{
 
    //Fetch the video and start processing it
    const videoPath = req.file.path;
-   const audioPath = `uploads/outputs/uploaded_file-${videoId}`
-
+   const audioPath = `uploads/outputs/uploaded_file-${videoId}.mp3`
    
    try{
      await extractAudioFile(videoPath,audioPath)

@@ -105,11 +105,11 @@ export const responseMessage = asyncHandler(async(req,res)=>{
       model: openai('gpt-4o-mini'),
       system: `You are answering questions about a video, using transcript excerpts as your source of truth.
 
-Transcript context:
-${transcriptContext}
+   Transcript context:
+   ${transcriptContext}
 
-Conversation so far:
-${conversationContext}`,
+   Conversation so far:
+   ${conversationContext}`,
       prompt: message,
    });
 
