@@ -1,65 +1,53 @@
-import { use, useState } from 'react'
-import axios from 'axios';
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { ThemeProvider } from "./context/ThemeContext"
+import { ToastProvider } from "./context/ToastContext"
+import { AuthProvider } from "./context/AuthContext"
+import { ChatProvider } from "./context/ChatContext"
+import { ProtectedRoute, PublicOnlyRoute } from "./components/RouteGuards"
+import Landing from "./pages/Landing"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
+import Dashboard from "./pages/Dashboard"
 
-function App() {
-  const [uploaded_video,setVideo] = useState(null);
-  const [text,setText] = useState('hello world');
-
-  const handleFileChange = (e)=>{
-    setVideo(e.target.files[0]);
-  }
-
-  const getVideoId = async()=>{
-    await axios.get("http://localhost:4000/api/v1/get-video-data")
-    .then(response=>{
-      console.log(response.data.videoId);
-      return response.data.videoId;
-    })
-    .catch(error=>{console.error(`An error occured ${error}`)})
-  }
-
-  const handleUpload = async(e)=>{
-    e.preventDefault();
-    
-    //First get the server issued Id
-    const videoId = await getVideoId();
-    
-    if(!videoId) {
-      console.error('An error has occurred')
-    }
-    
-    const formData = new FormData();
-    formData.append('uploaded_video',uploaded_video);
-
-    await axios.post(
-      `http://localhost:4000/api/v1/videos/${videoId}/process-video`,
-      formData
-    )
-    .then(response => {
-      console.log(response);
-      setText(response.transcript);
-    })
-    .catch(error => console.error(`An error has occured ${error}`))
-  }
-
+export default function App() {
   return (
-    <>
-    <div className='container'>
-    <form encType='multipart/form-data' className='upload-form' name='uploaded_file'>
-     <label htmlFor="videoInt" className='upload-label'>Upload your video</label>
-     <br />
-     <input type="file" name='videoInt' className='upload-file-intput' onChange={handleFileChange}></input>
-     <br />
-     <button type='submit' value='Upload file' className='upload-btn' onClick={handleUpload}>Upload</button>
-    </form>
-    </div>
-    <br />
-    <div>
-      <p2>Response text: {text}</p2>
-    </div>
-    </>
+    <ThemeProvider>
+      <ToastProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route
+                path="/login"
+                element={
+                  <PublicOnlyRoute>
+                    <Login />
+                  </PublicOnlyRoute>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <PublicOnlyRoute>
+                    <Register />
+                  </PublicOnlyRoute>
+                }
+              />
+              <Route
+                path="/app"
+                element={
+                  <ProtectedRoute>
+                    <ChatProvider>
+                      <Dashboard />
+                    </ChatProvider>
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ToastProvider>
+    </ThemeProvider>
   )
 }
-
-export default App
