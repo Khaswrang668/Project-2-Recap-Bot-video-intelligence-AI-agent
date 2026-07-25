@@ -54,6 +54,7 @@ export const userLogin = asyncHandler(async(req,res)=>{
     .single()
     
     if(error) {
+        console.log(`Error: ${JSON.stringify(error)}`)
         return res.status(500).json({
             success: false,
             message: `Internal server error: ${error}`
@@ -144,7 +145,8 @@ export const registerUser = asyncHandler(async(req,res)=>{
 }) 
 
 export const userLogout = asyncHandler(async(req,res)=>{
-    const userId = req.user._id;
+    const userId = req.user.id;
+    console.log(`userId: ${userId}`);
 
     const {data,error} = await supabase.from('Users')
     .update({refreshToken: null})
@@ -175,8 +177,8 @@ export const userLogout = asyncHandler(async(req,res)=>{
 
 export const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
-    const user = req.user._id;
-
+    const userId = req.user.id;
+    
     if (!incomingRefreshToken) {
         return res.status(404).json({
           success: false,
@@ -192,7 +194,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     
         const {data: user,erorr: userError} = await supabase.from('Users')
         .select('*')
-        .eq('id',user)
+        .eq('id',userId)
         .single();
 
         if (!user) {
@@ -215,7 +217,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
         sameSite: 'none'
         }
     
-        const {accessToken, refreshToken: newRefreshToken} = await generateAccessAndRefereshTokens(user._id)
+        const {accessToken, refreshToken: newRefreshToken} = await generateAccessAndRefreshTokens(user.id)
     
         return res
         .status(200)

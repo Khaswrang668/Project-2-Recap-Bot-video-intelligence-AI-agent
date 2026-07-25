@@ -1,4 +1,4 @@
-import openai from '../utils/openaiClient.js';
+import { openai } from '../utils/openaiClient.js';
 import fs from 'fs';
 
 export const transcriptAudio = async(filepath) =>{
@@ -6,7 +6,7 @@ export const transcriptAudio = async(filepath) =>{
         file: fs.createReadStream(filepath),
         model: 'whisper-1'
     })
-    console.log(transcription.text);
+    //console.log(transcription.text);
     return transcription.text;
 }
 

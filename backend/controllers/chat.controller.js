@@ -1,16 +1,13 @@
-import { supabase } from "../db/supabaseDB.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { convertToVectorEmbeddings } from "../business-logic/convert-to-vector-embeddings.logic.js";
-//import { getAIResponse } from "../business-logic/query-openAI.logic.js";
-import { streamText, convertToModelMessages } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { aiSdkOpenAI } from '../utils/openaiClient.js'; // adjust path to wherever openaiClient.js lives
+import { convertToVectorEmbeddings } from '../business-logic/convert-to-vector-embeddings.logic.js';
+import { supabase } from '../db/supabaseDB.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const initChatBox = asyncHandler(async(req,res)=>{
-   //Create a caht box to store all chat messages of the same topic/video
    const videoId = req.params.videoId;
-   const user = req.user._id;
+   const user = req.user.id;
 
-   //Check video existence and ownership
    const {data,error} = await supabase.from('Videos')
    .select('*')
    .eq('id',videoId)
@@ -19,7 +16,7 @@ export const initChatBox = asyncHandler(async(req,res)=>{
    if(error) {
       return res.status(500).json({
          success: false,
-         message: `Internal server error: ${error}`
+         message: `Internal server error: ${JSON.stringify(error)}`
       })
    }
    if(!data) {
@@ -29,13 +26,13 @@ export const initChatBox = asyncHandler(async(req,res)=>{
       })
    }
    if(data.user !== user) {
-      return res.status(400).json({
+      return res.status(403).json({   // 403, not 400 — this is an authorization failure
          success: false,
          message: 'Unauthorized access to the video'
       })
    }
    
-   const {data1,error1} = await supabase.from('Box')
+   const {data: box, error: boxError} = await supabase.from('Box')
    .insert({
       user: user,
       video: videoId
@@ -43,19 +40,28 @@ export const initChatBox = asyncHandler(async(req,res)=>{
    .select()
    .single()
 
+   if(boxError){
+      return res.status(500).json({
+         success: false,
+         message: `Internal server error: ${JSON.stringify(boxError)}`
+      })
+   }
+
    res.status(200).json({
       success: true,
-      message: 'Successfully intialized a chat box and returned its Id',
-      body: data1.id
+      message: 'Successfully initialized a chat box and returned its Id',
+      body: box.id
    })
 })
 
 export const responseMessage = asyncHandler(async(req,res)=>{
    const message = req.body.message;
    const chatId = req.params.chatId;
-   const userId = req.user._id;
+   const userId = req.user.id;
 
-   const queryEmbedding = await convertToVectorEmbeddings(message);
+   // embed the user's message — pass as array, pull out just the numeric vector
+   const embeddingResult = await convertToVectorEmbeddings([message]);
+   const queryEmbedding = embeddingResult[0].embedding;
 
    const {data: box, error: boxError} = await supabase.from('Box')
    .select('video, user')
@@ -63,7 +69,7 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    .single()
 
    if(boxError) {
-      return res.status(500).json({ success: false, message: `Internal server error ${boxError}` })
+      return res.status(500).json({ success: false, message: `Internal server error: ${JSON.stringify(boxError)}` })
    }
    if (box.user !== userId) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to this chat' })
@@ -75,7 +81,7 @@ export const responseMessage = asyncHandler(async(req,res)=>{
       match_count: 5
    })
    if(matchError) {
-      return res.status(500).json({ success: false, message: `Internal server error ${matchError}` })
+      return res.status(500).json({ success: false, message: `Internal server error: ${JSON.stringify(matchError)}` })
    }
 
    const { data: history, error: historyError } = await supabase.from('Chats')
@@ -83,26 +89,25 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    .eq('box', chatId)
    .order('created_at', { ascending: true })
    .limit(6);
-   
    if(historyError) {
-      return res.status(500).json({ success: false, message: `Internal server error ${historyError}` })
+      return res.status(500).json({ success: false, message: `Internal server error: ${JSON.stringify(historyError)}` })
    }
 
    const transcriptContext = chunks.length
       ? chunks.map(c => c.body).join('\n\n')
       : 'No relevant transcript sections found.';
+   
    const conversationContext = history
       .map(h => `User: ${h.user_query}\nAssistant: ${h.response}`)
       .join('\n\n');
 
-   // streaming headers — needed on Render to avoid buffering
    res.setHeader('Content-Type', 'text/event-stream');
    res.setHeader('Cache-Control', 'no-cache, no-transform');
    res.setHeader('Connection', 'keep-alive');
    res.setHeader('X-Accel-Buffering', 'no');
 
    const result = streamText({
-      model: openai('gpt-4o-mini'),
+      model: aiSdkOpenAI('gpt-4o-mini'),
       system: `You are answering questions about a video, using transcript excerpts as your source of truth.
 
    Transcript context:
@@ -113,10 +118,11 @@ export const responseMessage = asyncHandler(async(req,res)=>{
       prompt: message,
    });
 
-   result.pipeDataStreamToResponse(res); // sends the SSE-formatted stream
+   result.pipeUIMessageStreamToResponse(res);
 
-   // after the stream completes, persist the full answer
    const fullText = await result.text;
+   console.log('\n--- Full AI response ---\n', fullText, '\n------------------------\n');
+
    await supabase.from('Chats').insert({
       user_query: message,
       response: fullText,
@@ -125,7 +131,7 @@ export const responseMessage = asyncHandler(async(req,res)=>{
 })
 
 export const getChatHistory = asyncHandler(async(req,res)=>{
-   const userId = req.user._id;
+   const userId = req.user.id;
 
    const {data: chatHistory,error: chatHistoryError} = await supabase.from('Box')
    .select('*')
@@ -148,7 +154,7 @@ export const getChatHistory = asyncHandler(async(req,res)=>{
 
 export const viewChat = asyncHandler(async(req,res)=>{
    const boxId = req.params.boxId;
-   const userId = req.user._id;
+   const userId = req.user.id;
 
    const { data: box, error: boxError } = await supabase.from('Box')
    .select('user')
@@ -179,3 +185,55 @@ export const viewChat = asyncHandler(async(req,res)=>{
       messages: messages
    })
 })
+
+/*export const deleteChats = asyncHandler(async(req,res)=>{
+   const boxId = req.params.chatId; 
+
+   const {data: box,error: boxError} = await supabase.from('Box') //Fetch the details
+   .select('*')
+   .eq('id',chatId)
+   .single()
+   
+   if(!box) { //Check existence
+      return res.status(404).json({
+         success:false,
+         message:'No such chat boxes found'
+      })
+   }
+
+   if(boxError) {
+      return res.status(500).json({
+      success: false,
+      message: JSON.stringify(chatError)
+      })
+   }
+
+   //Delete the chat box first
+   const {deleteError: error} = await supabase.from('Box')
+   .delete()
+   .eq('id',boxId)
+   .select()
+
+   if(deleteError) {
+      return res.status(500).json({
+      success: false,
+      message: JSON.stringify(deleteError)
+      })
+   }
+   
+
+   //Get chats next 
+   const {chat: data, chatError:error} = await supabase.from('Chats')
+   .select('*') 
+   .eq('box',boxId)
+   
+   if(chatError){
+      return res.status(500).json({
+      success: false,
+      message: JSON.stringify(chatError)
+      })
+   }
+
+   //Delete all chat messages
+   const {deleteChatError: error} = await supabase.from("'Vi")
+})*/

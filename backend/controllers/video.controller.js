@@ -46,9 +46,10 @@ export const processVideo = asyncHandler(async(req,res)=>{
    if(error) {
      return res.status(500).json({
         success: false,
-        message: `Internal server error ${error}`
+        message: `Failed to fetch video data:${JSON.stringify(error)}`
      })
    }
+
    console.log(`${data.user}  ${userId}`);
 
    if(data.user !== userId) {
@@ -65,21 +66,29 @@ export const processVideo = asyncHandler(async(req,res)=>{
    try{
      await extractAudioFile(videoPath,audioPath)
      const transcription = await transcriptAudio(audioPath); //Convert audio file to text
+     console.log(`transcription: ${transcription}`)
+
      const chunkedText = await textSplitter(transcription); //Chunk the text
-     const embedding = await convertToVectorEmbeddings(chunkedText);
+     console.log(`chunkedText: ${chunkedText}`)
+     
+     // remove JSON.stringify — use the array directly
+const embeddingResults = await convertToVectorEmbeddings(chunkedText);
 
-     const rows = chunkedText.map((chunk, i) => ({
-     body: chunk,
-     embedding: embeddingResults[i].embedding,
-     video: videoId
-    }));
+const rows = chunkedText.map((chunk, i) => ({
+   body: chunk,
+   embedding: embeddingResults[i].embedding,
+   video: videoId
+}));
 
-    const { error } = await supabase.from('Documents').insert(rows);
+const { error: insertError } = await supabase.from('Documents').insert(rows);
+if (insertError) {
+   return res.status(500).json({ success: false, message: `Failed to store embeddings: ${JSON.stringify(insertError)}` });
+}
    }
    catch(error){
        return res.status(500).json({
          success: false,
-         message: `Internal server error: ${error}`
+         message: `Internal server error: ${JSON.stringify(error)}`
        })
    }
    finally {
