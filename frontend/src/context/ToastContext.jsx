@@ -30,6 +30,40 @@ export function ToastProvider({ children }) {
     }),
     [push]
   )
+  function Toast({ message, type, onClose }) {
+  const Icon = type === "success" ? CheckCircle2 : type === "error" ? AlertCircle : Info
+  const iconColor =
+    type === "success"
+      ? "text-primary"
+      : type === "error"
+        ? "text-danger"
+        : "text-muted-foreground"
+
+  return (
+    <div
+      role="status"
+      className={cn(
+        "animate-fade-in-up pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-lg"
+      )}
+    >
+      <Icon size={18} className={cn("mt-0.5 shrink-0", iconColor)} />
+      <p className="flex-1 text-sm leading-relaxed text-foreground">{message}</p>
+      <button
+        onClick={onClose}
+        aria-label="Dismiss notification"
+        className="shrink-0 rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  )
+}
+
+export function useToast() {
+  const ctx = useContext(ToastContext)
+  if (!ctx) throw new Error("useToast must be used within a ToastProvider")
+  return ctx
+}
 
   return (
     <ToastContext.Provider value={toast}>
