@@ -80,7 +80,8 @@ export const userLogin = asyncHandler(async(req,res)=>{
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: 'none'
     }
     
     console.log('User has logged in !')
@@ -166,7 +167,8 @@ export const userLogout = asyncHandler(async(req,res)=>{
     
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: 'none'
     }
 
     res.status(200)
