@@ -95,7 +95,7 @@ export const processVideo = asyncHandler(async(req,res)=>{
    catch(error){
        return res.status(500).json({
          success: false,
-         message: `Failed to process the video file: ${error.message || JSON.stringify(error)}`
+         message: `Failed to process the video file: ${error.message} and raw json${JSON.stringify(error)}`
        })
    }
    finally {
