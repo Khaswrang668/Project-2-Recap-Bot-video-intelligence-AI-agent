@@ -1,12 +1,20 @@
 import { openai } from '../utils/openaiClient.js';
+import { toFile } from 'openai/uploads';
 import fs from 'fs';
+import path from 'path';
 
 export const transcriptAudio = async(filepath) =>{
+    try{
+    const buffer = fs.readFileSync(filepath);
+    const file = await toFile(buffer, path.basename(filepath));
+
     const transcription = await openai.audio.transcriptions.create({
-        file: fs.createReadStream(filepath),
+        file,
         model: 'whisper-1'
     })
-    //console.log(transcription.text);
     return transcription.text;
+    }
+    catch(error){
+    console.log(`Error in transcription: ${error.message}`)
+    }
 }
-

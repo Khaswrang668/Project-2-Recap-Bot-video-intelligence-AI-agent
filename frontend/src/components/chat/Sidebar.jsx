@@ -4,6 +4,20 @@ import { UserMenu } from "./UserMenu"
 import { useChat } from "@/context/ChatContext"
 import { cn } from "@/lib/cn"
 
+// Backend `Box` rows don't currently have a `title` column — fall back to a
+// readable label derived from when the chat was created. If a `title` field
+// is added to the backend later, it's used automatically.
+function formatBoxLabel(box) {
+  if (box.title) return box.title
+  if (box.created_at) {
+    const d = new Date(box.created_at)
+    if (!Number.isNaN(d.getTime())) {
+      return `Chat · ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+    }
+  }
+  return "Untitled chat"
+}
+
 export function Sidebar({ onNewChat, onCloseMobile, showCollapse, onCollapse }) {
   const {
     boxes,
@@ -63,21 +77,21 @@ export function Sidebar({ onNewChat, onCloseMobile, showCollapse, onCollapse }) 
         ) : (
           <ul className="flex flex-col gap-0.5">
             {boxes.map((box) => (
-              <li key={box.boxId}>
+              <li key={box.id}>
                 <div
-                  onClick={() => handleSelect(box.boxId)}
+                  onClick={() => handleSelect(box.id)}
                   className={cn(
                     "group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                    activeBoxId === box.boxId
+                    activeBoxId === box.id
                       ? "bg-sidebar-hover text-foreground"
                       : "text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"
                   )}
                 >
                   <MessageSquare size={16} className="shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">{box.title || "Untitled chat"}</span>
+                  <span className="min-w-0 flex-1 truncate">{formatBoxLabel(box)}</span>
                   <button
-                    onClick={(e) => handleDelete(e, box.boxId)}
-                    aria-label={`Delete chat ${box.title || ""}`}
+                    onClick={(e) => handleDelete(e, box.id)}
+                    aria-label={`Delete chat ${formatBoxLabel(box)}`}
                     className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:bg-danger/10 hover:text-danger group-hover:opacity-100 focus:opacity-100"
                   >
                     <Trash2 size={15} />

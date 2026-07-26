@@ -160,7 +160,7 @@ export function ChatProvider({ children }) {
   const deleteChat = useCallback(
     (boxId) => {
       // deleteChat() stub — replace with real API call when available.
-      setBoxes((prev) => prev.filter((b) => b.boxId !== boxId))
+      setBoxes((prev) => prev.filter((b) => b.id !== boxId))
       if (activeBoxId === boxId) {
         setActiveBoxId(null)
         setMessages([])

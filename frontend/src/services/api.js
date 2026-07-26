@@ -4,19 +4,12 @@
  * All authenticated requests send credentials (httpOnly cookies) via
  * `credentials: "include"`. The base URL and route prefixes are configurable
  * through environment variables so the same build can target any backend.
- *
- * When VITE_DEMO_MODE is not explicitly "false", the app runs against an
- * in-memory mock backend (see ./mockApi.js) so the full UI — including video
- * processing and streamed AI responses — can be explored without a live server.
  */
-import * as mock from "./mockApi"
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
-const USERS_PREFIX = import.meta.env.VITE_API_USERS_PREFIX || "/api/users"
-const VIDEOS_PREFIX = import.meta.env.VITE_API_VIDEOS_PREFIX || "/api/videos"
-const CHATS_PREFIX = import.meta.env.VITE_API_CHATS_PREFIX || "/api/chats"
-
-export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== "false"
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000"
+const USERS_PREFIX = import.meta.env.VITE_API_USERS_PREFIX || "/api/v1/users"
+const VIDEOS_PREFIX = import.meta.env.VITE_API_VIDEOS_PREFIX || "/api/v1/videos"
+const CHATS_PREFIX = import.meta.env.VITE_API_CHATS_PREFIX || "/api/v1/chats"
 
 /** Thrown for any non-ok response or `{ success: false }` payload. */
 export class ApiError extends Error {
@@ -62,39 +55,34 @@ async function request(path, { method = "GET", body, headers, signal } = {}) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Auth — /api/users                                                  */
+/*  Auth — /api/v1/users                                               */
 /* ------------------------------------------------------------------ */
 export const authApi = {
   register({ username, email, password }) {
-    if (DEMO_MODE) return mock.authApi.register({ username, email, password })
     return request(`${USERS_PREFIX}/user-register`, {
       method: "POST",
       body: { username, email, password },
     })
   },
   login({ identifier, password }) {
-    if (DEMO_MODE) return mock.authApi.login({ identifier, password })
     return request(`${USERS_PREFIX}/user-login`, {
       method: "POST",
       body: { identifier, password },
     })
   },
   logout() {
-    if (DEMO_MODE) return mock.authApi.logout()
     return request(`${USERS_PREFIX}/user-logout`, { method: "POST" })
   },
   refresh() {
-    if (DEMO_MODE) return mock.authApi.refresh()
     return request(`${USERS_PREFIX}/refresh-access-token`, { method: "POST" })
   },
 }
 
 /* ------------------------------------------------------------------ */
-/*  Video — /api/videos                                                */
+/*  Video — /api/v1/videos                                             */
 /* ------------------------------------------------------------------ */
 export const videoApi = {
   getVideoId() {
-    if (DEMO_MODE) return mock.videoApi.getVideoId()
     return request(`${VIDEOS_PREFIX}/get-video-id`)
   },
   /**
@@ -103,8 +91,6 @@ export const videoApi = {
    * show a real progress bar (fetch has no upload progress events).
    */
   processVideo(videoId, file, { onUploadProgress, signal } = {}) {
-    if (DEMO_MODE) return mock.videoApi.processVideo(videoId, file, { onUploadProgress, signal })
-
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       xhr.open("POST", `${BASE_URL}${VIDEOS_PREFIX}/${videoId}/process-video`)
@@ -135,19 +121,16 @@ export const videoApi = {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Chat — /api/chats                                                  */
+/*  Chat — /api/v1/chats                                               */
 /* ------------------------------------------------------------------ */
 export const chatApi = {
   initializeChat(videoId) {
-    if (DEMO_MODE) return mock.chatApi.initializeChat(videoId)
     return request(`${CHATS_PREFIX}/${videoId}/intialize-chat`, { method: "POST" })
   },
   getChatHistory() {
-    if (DEMO_MODE) return mock.chatApi.getChatHistory()
     return request(`${CHATS_PREFIX}/get-chat-history`)
   },
   viewChat(boxId) {
-    if (DEMO_MODE) return mock.chatApi.viewChat(boxId)
     return request(`${CHATS_PREFIX}/${boxId}/view-chat`)
   },
 
@@ -157,8 +140,6 @@ export const chatApi = {
    * Returns the full concatenated response text.
    */
   async streamResponse(chatId, message, { onToken, signal } = {}) {
-    if (DEMO_MODE) return mock.chatApi.streamResponse(chatId, message, { onToken, signal })
-
     const res = await fetch(`${BASE_URL}${CHATS_PREFIX}/${chatId}/get-response-message`, {
       method: "POST",
       credentials: "include",
@@ -191,16 +172,26 @@ export const chatApi = {
           if (!trimmed.startsWith("data:")) continue
           const payload = trimmed.slice(5).trimStart()
           if (payload === "[DONE]") continue
-          let token = payload
-          // Some backends wrap tokens as JSON: { "token": "..." } or { "content": "..." }
+
+          let token = null
           try {
             const parsed = JSON.parse(payload)
-            token = parsed.token ?? parsed.content ?? parsed.delta ?? payload
+            if (typeof parsed?.type === "string") {
+              if (parsed.type === "text-delta") {
+                token = parsed.delta ?? ""
+              }
+              // other types (start, text-start, text-end, finish-step, finish, etc.) are ignored
+            } else {
+              token = parsed.token ?? parsed.content ?? parsed.delta ?? null
+            }
           } catch {
-            /* plain-text token */
+            token = payload
           }
-          full += token
-          onToken?.(token)
+
+          if (token) {
+            full += token
+            onToken?.(token)
+          }
         }
       }
     }

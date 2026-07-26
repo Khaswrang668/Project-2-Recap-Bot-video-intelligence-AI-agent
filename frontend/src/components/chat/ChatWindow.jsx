@@ -24,7 +24,7 @@ export function ChatWindow() {
   const scrollRef = useRef(null)
   const bottomRef = useRef(null)
 
-  const activeBox = boxes.find((b) => b.boxId === activeBoxId)
+  const activeBox = boxes.find((b) => b.id === activeBoxId)
 
   // Auto-scroll to latest message as content streams in.
   useEffect(() => {

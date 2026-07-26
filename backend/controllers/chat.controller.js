@@ -69,7 +69,7 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    .single()
 
    if(boxError) {
-      return res.status(500).json({ success: false, message: `Internal server error: ${JSON.stringify(boxError)}` })
+      return res.status(500).json({ success: false, message: `Error in chat instance formation: ${JSON.stringify(boxError)}` })
    }
    if (box.user !== userId) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to this chat' })
@@ -81,7 +81,7 @@ export const responseMessage = asyncHandler(async(req,res)=>{
       match_count: 5
    })
    if(matchError) {
-      return res.status(500).json({ success: false, message: `Internal server error: ${JSON.stringify(matchError)}` })
+      return res.status(500).json({ success: false, message: `Failed to fetch matching documents: ${JSON.stringify(matchError)}` })
    }
 
    const { data: history, error: historyError } = await supabase.from('Chats')
@@ -90,7 +90,7 @@ export const responseMessage = asyncHandler(async(req,res)=>{
    .order('created_at', { ascending: true })
    .limit(6);
    if(historyError) {
-      return res.status(500).json({ success: false, message: `Internal server error: ${JSON.stringify(historyError)}` })
+      return res.status(500).json({ success: false, message: `Failed to fetch the previous chat messages: ${JSON.stringify(historyError)}` })
    }
 
    const transcriptContext = chunks.length

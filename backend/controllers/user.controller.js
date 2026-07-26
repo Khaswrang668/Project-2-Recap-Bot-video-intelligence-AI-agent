@@ -57,7 +57,7 @@ export const userLogin = asyncHandler(async(req,res)=>{
         console.log(`Error: ${JSON.stringify(error)}`)
         return res.status(500).json({
             success: false,
-            message: `Internal server error: ${error}`
+            message: `Error in fetching users details: ${error}`
         })
     }
 
@@ -82,6 +82,8 @@ export const userLogin = asyncHandler(async(req,res)=>{
         httpOnly: true,
         secure: true
     }
+    
+    console.log('User has logged in !')
 
     res
     .status(200)
@@ -96,6 +98,7 @@ export const userLogin = asyncHandler(async(req,res)=>{
 
 export const registerUser = asyncHandler(async(req,res)=>{
     const {username,email,password} = req.body;
+    console.log('Register user has intiated')
 
     if(!username || !email || !password) {
         return res.status(400).json({
@@ -133,7 +136,7 @@ export const registerUser = asyncHandler(async(req,res)=>{
     if(error) {
         return res.status(500).json({
             success: false,
-            message: `Internal server error: ${error}`
+            message: `Error in creating user: ${error}`
         })
     }
 

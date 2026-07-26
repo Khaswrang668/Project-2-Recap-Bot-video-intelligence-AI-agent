@@ -22,7 +22,7 @@ export const generateAndSendID = asyncHandler(async(req,res)=>{
    if(error) {
      return res.status(500).json({
         success: false,
-        message: `Internal server error ${error}`
+        message: `Error in fetching video: ${error}`
      })
    }
    
@@ -65,6 +65,13 @@ export const processVideo = asyncHandler(async(req,res)=>{
    
    try{
      await extractAudioFile(videoPath,audioPath)
+
+     const audioStats = fs.statSync(audioPath)
+     console.log(`Extracted audio size: ${audioStats.size} bytes`)
+     if (audioStats.size < 1000) {
+     throw new Error("Extracted audio is empty or too small — this video likely has no audio track, or the file is corrupted.")
+     }
+     
      const transcription = await transcriptAudio(audioPath); //Convert audio file to text
      console.log(`transcription: ${transcription}`)
 
@@ -72,23 +79,23 @@ export const processVideo = asyncHandler(async(req,res)=>{
      console.log(`chunkedText: ${chunkedText}`)
      
      // remove JSON.stringify — use the array directly
-const embeddingResults = await convertToVectorEmbeddings(chunkedText);
+     const embeddingResults = await convertToVectorEmbeddings(chunkedText);
 
-const rows = chunkedText.map((chunk, i) => ({
-   body: chunk,
-   embedding: embeddingResults[i].embedding,
-   video: videoId
-}));
+     const rows = chunkedText.map((chunk, i) => ({
+      body: chunk,
+      embedding: embeddingResults[i].embedding,
+      video: videoId
+   }));
 
-const { error: insertError } = await supabase.from('Documents').insert(rows);
-if (insertError) {
-   return res.status(500).json({ success: false, message: `Failed to store embeddings: ${JSON.stringify(insertError)}` });
-}
+   const { error: insertError } = await supabase.from('Documents').insert(rows);
+   if (insertError) {
+      return res.status(500).json({ success: false, message: `Failed to store embeddings: ${JSON.stringify(insertError)}` });
+   }
    }
    catch(error){
        return res.status(500).json({
          success: false,
-         message: `Internal server error: ${JSON.stringify(error)}`
+         message: `Failed to process the video file: ${error.message || JSON.stringify(error)}`
        })
    }
    finally {
