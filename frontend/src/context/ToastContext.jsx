@@ -39,6 +39,7 @@ export function ToastProvider({ children }) {
           <Toast key={t.id} {...t} onClose={() => dismiss(t.id)} />
         ))}
       </div>
+  
     </ToastContext.Provider>
   )
 }
