@@ -1,7 +1,6 @@
-import { createContext, useCallback, useContext, useRef, useState } from "react"
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react"
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react"
 import { cn } from "@/lib/cn"
-import { useMemo } from "react"
 
 const ToastContext = createContext(null)
 
@@ -22,15 +21,16 @@ export function ToastProvider({ children }) {
     },
     [dismiss]
   )
-  
-  useMemo(()=>{
-   const toast = {
-    success: (m, d) => push(m, "success", d),
-    error: (m, d) => push(m, "error", d),
-    info: (m, d) => push(m, "info", d),
-  }
-  },[push])
-  
+
+  const toast = useMemo(
+    () => ({
+      success: (m, d) => push(m, "success", d),
+      error: (m, d) => push(m, "error", d),
+      info: (m, d) => push(m, "info", d),
+    }),
+    [push]
+  )
+
   return (
     <ToastContext.Provider value={toast}>
       {children}
@@ -41,39 +41,4 @@ export function ToastProvider({ children }) {
       </div>
     </ToastContext.Provider>
   )
-}
-
-function Toast({ message, type, onClose }) {
-  const Icon = type === "success" ? CheckCircle2 : type === "error" ? AlertCircle : Info
-  const iconColor =
-    type === "success"
-      ? "text-primary"
-      : type === "error"
-        ? "text-danger"
-        : "text-muted-foreground"
-
-  return (
-    <div
-      role="status"
-      className={cn(
-        "animate-fade-in-up pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-lg"
-      )}
-    >
-      <Icon size={18} className={cn("mt-0.5 shrink-0", iconColor)} />
-      <p className="flex-1 text-sm leading-relaxed text-foreground">{message}</p>
-      <button
-        onClick={onClose}
-        aria-label="Dismiss notification"
-        className="shrink-0 rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
-      >
-        <X size={16} />
-      </button>
-    </div>
-  )
-}
-
-export function useToast() {
-  const ctx = useContext(ToastContext)
-  if (!ctx) throw new Error("useToast must be used within a ToastProvider")
-  return ctx
 }
