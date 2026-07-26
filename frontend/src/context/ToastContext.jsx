@@ -30,7 +30,21 @@ export function ToastProvider({ children }) {
     }),
     [push]
   )
-  function Toast({ message, type, onClose }) {
+  
+  return (
+    <ToastContext.Provider value={toast}>
+      {children}
+      <div className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex flex-col items-center gap-2 px-4">
+        {toasts.map((t) => (
+          <Toast key={t.id} {...t} onClose={() => dismiss(t.id)} />
+        ))}
+      </div>
+  
+    </ToastContext.Provider>
+  )
+}
+
+function Toast({ message, type, onClose }) {
   const Icon = type === "success" ? CheckCircle2 : type === "error" ? AlertCircle : Info
   const iconColor =
     type === "success"
@@ -63,17 +77,4 @@ export function useToast() {
   const ctx = useContext(ToastContext)
   if (!ctx) throw new Error("useToast must be used within a ToastProvider")
   return ctx
-}
-
-  return (
-    <ToastContext.Provider value={toast}>
-      {children}
-      <div className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex flex-col items-center gap-2 px-4">
-        {toasts.map((t) => (
-          <Toast key={t.id} {...t} onClose={() => dismiss(t.id)} />
-        ))}
-      </div>
-  
-    </ToastContext.Provider>
-  )
 }
