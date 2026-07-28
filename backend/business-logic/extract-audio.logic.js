@@ -6,6 +6,9 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 export const extractAudioFile = async (videoPath,audioPath) => {
     await new Promise((resolve,reject)=>{
         ffmpeg(videoPath)
+        .audioCodec('libmp3lame')
+        .audioBitrate('32k')
+        .audioChannels(1)
         .output(audioPath)
         .noVideo() 
         .on('end', () => {
