@@ -12,11 +12,10 @@ A full-stack RAG (Retrieval-Augmented Generation) video intelligence platform. U
 |---|---|
 | ![Home Screenshot](./img/Screenshot (28) (1).png) | ![Chat Screenshot](./img/Screenshot (29).png) |
 
+
 | Transcript View |
 |---|
-| ![Transcript Screenshot](img/Screenshot (30).png) |
-
-> Add your screenshots to a `screenshots/` folder in the repo root and update the filenames/paths above to match.
+| ![Transcript Screenshot](./img/Screenshot (30).png) |
 
 ## How It Works
 
