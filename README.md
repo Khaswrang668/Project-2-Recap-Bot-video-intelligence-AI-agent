@@ -10,12 +10,11 @@ A full-stack RAG (Retrieval-Augmented Generation) video intelligence platform. U
 
 | Home / Upload | Chat / Query |
 |---|---|
-| ![Home Screenshot](./img/Screenshot (28) (1).png) | ![Chat Screenshot](./img/Screenshot (29).png) |
-
+| ![Home Screenshot](./img/Screenshot%20(28)%20(1).png) | ![Chat Screenshot](./img/Screenshot%20(29).png) |
 
 | Transcript View |
 |---|
-| ![Transcript Screenshot](./img/Screenshot (30).png) |
+| ![Transcript Screenshot](./img/Screenshot%20(30).png) |
 
 ## How It Works
 
