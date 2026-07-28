@@ -2,6 +2,22 @@
 
 A full-stack RAG (Retrieval-Augmented Generation) video intelligence platform. Upload a video, get it transcribed and embedded, then ask questions about its content and get streamed, context-aware answers.
 
+## Live Demo
+
+🔗 [Live Demo](https://www.recapbot.in/)
+
+## Screenshots
+
+| Home / Upload | Chat / Query |
+|---|---|
+| ![Home Screenshot](./img/Screenshot (28) (1).png) | ![Chat Screenshot](./img/Screenshot (29).png) |
+
+| Transcript View |
+|---|
+| ![Transcript Screenshot](img/Screenshot (30).png) |
+
+> Add your screenshots to a `screenshots/` folder in the repo root and update the filenames/paths above to match.
+
 ## How It Works
 
 1. **Upload** — a video is uploaded and stored.
